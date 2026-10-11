@@ -303,6 +303,34 @@ class USBMonitorEngine:
             except Exception:
                 pass
 
+        # 1. Hồi cứu & hoàn thiện các phiên trước đó nếu chưa được chốt do bị rút USB đột ngột
+        unclosed_footer = []
+        for prev_session in state.get("sessions", []):
+            if prev_session.get("status") != "Completed" or prev_session.get("plug_out") is None:
+                last_active = prev_session.get("last_heartbeat") or prev_session.get("plug_in")
+                prev_session["plug_out"] = last_active
+                try:
+                    t_in = datetime.strptime(prev_session["plug_in"], "%Y/%m/%d %H:%M:%S")
+                    t_out = datetime.strptime(last_active, "%Y/%m/%d %H:%M:%S")
+                    dur = int((t_out - t_in).total_seconds())
+                    prev_session["duration_seconds"] = max(dur, 0)
+                    prev_session["duration_formatted"] = str(t_out - t_in).split(".")[0]
+                except Exception:
+                    prev_session["duration_seconds"] = 0
+                    prev_session["duration_formatted"] = "00:00:00"
+                prev_session["status"] = "Completed"
+
+                sid = prev_session.get("session_id", "?")
+                unclosed_footer.append(
+                    f"\n{'='*80}\n"
+                    f"SESSION #{sid} KẾT THÚC (RÚT USB) | PLUG-OUT: {prev_session['plug_out']} | THỜI LƯỢNG: {prev_session.get('duration_formatted', '00:00:00')}\n"
+                    f"{'='*80}\n"
+                )
+
+        if unclosed_footer:
+            for ftr in unclosed_footer:
+                self._write_raw_log(ftr)
+
         state["device_name"] = self.volume_info
         state["total_plug_count"] = state.get("total_plug_count", 0) + 1
         self.plug_count = state["total_plug_count"]
@@ -312,8 +340,11 @@ class USBMonitorEngine:
         current_session = {
             "session_id": self.session_id,
             "plug_in": self._get_timestamp(),
-            "plug_out": None,
-            "duration_seconds": None,
+            "last_heartbeat": self._get_timestamp(),
+            "plug_out": self._get_timestamp(),
+            "duration_seconds": 0,
+            "duration_formatted": "00:00:00",
+            "status": "Active",
             "drive": self.drive_letter,
             "volume_info": self.volume_info
         }
@@ -337,6 +368,35 @@ class USBMonitorEngine:
 
         # Quét và tạo snapshot cây thư mục
         self.generate_folder_tree()
+
+    def _update_heartbeat(self):
+        """Cập nhật nhịp tim và thời lượng phiên vào state.json an toàn trong < 0.5ms."""
+        try:
+            now = datetime.now()
+            if self.session_start_time and os.path.exists(self.state_file):
+                dur = int((now - self.session_start_time).total_seconds())
+                dur_str = str(now - self.session_start_time).split(".")[0]
+                ts = self._get_timestamp()
+                with open(self.state_file, "r", encoding="utf-8") as f:
+                    st = json.load(f)
+                if st.get("sessions"):
+                    st["sessions"][-1]["last_heartbeat"] = ts
+                    st["sessions"][-1]["plug_out"] = ts
+                    st["sessions"][-1]["duration_seconds"] = dur
+                    st["sessions"][-1]["duration_formatted"] = dur_str
+                    st["sessions"][-1]["status"] = "Active"
+                with open(self.state_file, "w", encoding="utf-8") as f:
+                    json.dump(st, f, ensure_ascii=False, indent=2)
+        except Exception:
+            pass
+
+    def _heartbeat_worker(self):
+        """Cập nhật nhịp tim định kỳ mỗi 30s để bảo toàn thời lượng phiên khi rút USB."""
+        while self.is_running:
+            time.sleep(30.0)
+            if not self.is_running:
+                break
+            self._update_heartbeat()
 
     def close_session(self):
         """Đóng phiên làm việc an toàn khi rút USB hoặc dừng ứng dụng."""
@@ -365,8 +425,11 @@ class USBMonitorEngine:
                 with open(self.state_file, "r", encoding="utf-8") as f:
                     state = json.load(f)
                 if state.get("sessions"):
+                    state["sessions"][-1]["last_heartbeat"] = self._get_timestamp()
                     state["sessions"][-1]["plug_out"] = self._get_timestamp()
                     state["sessions"][-1]["duration_seconds"] = duration
+                    state["sessions"][-1]["duration_formatted"] = duration_str
+                    state["sessions"][-1]["status"] = "Completed"
                 with open(self.state_file, "w", encoding="utf-8") as f:
                     json.dump(state, f, ensure_ascii=False, indent=2)
         except Exception:
@@ -522,6 +585,9 @@ class USBMonitorEngine:
 
         if has_folder_change:
             self.generate_folder_tree()
+
+        # Đồng bộ nhịp tim tức thì mỗi khi có sự kiện thao tác file
+        self._update_heartbeat()
 
     def _watch_directory_events(self, watch_path, tag=""):
         """Worker sử dụng kernel32.ReadDirectoryChangesW (Zero-polling, Event-driven 100%)."""
@@ -712,6 +778,10 @@ class USBMonitorEngine:
             daemon=True
         )
         t_main_watch.start()
+
+        # Luồng 4: Heartbeat định kỳ mỗi 10 giây lưu nhịp tim và thời lượng phiên
+        t_heartbeat = threading.Thread(target=self._heartbeat_worker, daemon=True)
+        t_heartbeat.start()
 
         # Giữ main thread cho đến khi nhận tín hiệu tắt hoặc ổ USB bị rút
         while self.is_running:

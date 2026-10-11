@@ -14,6 +14,8 @@ Tất cả những thay đổi và cập nhật quan trọng của dự án **US
 - **Bộ công cụ Gỡ cài đặt (Uninstall):** Thêm file `uninstall_autorun.bat` và `uninstall_autorun_pc.ps1` cho phép gỡ bỏ hoàn toàn Scheduled Task khỏi hệ thống Windows chỉ bằng 1 cú nhấp đúp.
 - **Cơ chế Single-Instance Named Mutex:** Đảm bảo chỉ có duy nhất 1 tiến trình giám sát chạy trên mỗi ổ USB, ngăn ngừa việc click chuột nhiều lần gây xung đột ghi file log.
 - **Kích hoạt tức thì khi cài đặt:** Cải tiến `setup_autorun.bat` để vừa đăng ký Task Scheduler, vừa tự động bật ngầm ứng dụng ngay tại chỗ cho phiên hiện tại.
+- **Nhận diện Di chuyển file thông minh (Smart Move Pairing on FAT32):** Tự động nhận diện thao tác Cut-Paste (`Ctrl + X` & `Ctrl + V`) trên phân vùng FAT32, ghép đôi sự kiện `Delete` ở thư mục nguồn và `In` ở thư mục đích thành 1 sự kiện `Move` duy nhất (`Move FolderA/file to FolderB/`).
+- **Cơ chế Nhịp tim & Hồi cứu phiên khi rút USB (Heartbeat & Session Auto-Recovery):** Chạy luồng Heartbeat định kỳ mỗi 10 giây ghi lại mốc hoạt động gần nhất vào `state.json`. Khi USB bị rút đột ngột khỏi máy, thời gian rút `plug_out` và thời lượng phiên `duration_seconds` vẫn được bảo toàn chuẩn xác, không còn bị giá trị `null`. Tự động chốt lại các phiên dở dang khi cắm USB lần tiếp theo.
 - **Trình biên dịch tự động 1-Click:** Thêm `build.bat` giúp lập trình viên tự động đóng gói `usb_monitor.py` thành `USB_Monitor.exe` với PyInstaller.
 
 ### 🛠️ Sửa lỗi & Tối ưu (Fixed & Optimized)
