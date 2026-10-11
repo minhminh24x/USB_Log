@@ -1,0 +1,32 @@
+# Python Bytecode & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PyInstaller Build Artifacts
+build/
+dist/
+*.spec
+
+# Runtime Logs and Data (Never commit user logs)
+.usb_data/
+USB_Logs/
+**/.usb_data/
+**/USB_Logs/
+*.log
+*.tmp
+
+# Editors and IDEs
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# OS Generated Files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# Keep precompiled release binary in USB_Log distribution
+!USB_Log/USB_Monitor.exe

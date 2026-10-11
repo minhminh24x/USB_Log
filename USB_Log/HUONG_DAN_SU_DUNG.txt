@@ -1,0 +1,102 @@
+================================================================================
+  HƯỚNG DẪN SỬ DỤNG BỘ CÔNG CỤ GHI LOG & ĐẾM LẦN CẮM USB (UNIVERSAL PORTABLE)
+================================================================================
+
+Bộ công cụ này hoạt động khi bạn chép cả thư mục USB_Log vào USB (ví dụ: E:\USB_Log).
+Nó có thể dùng cho BẤT KỲ USB nào và hoạt động độc lập trên mọi máy tính Windows
+mà KHÔNG cần cài đặt thêm Python hay bất kỳ phần mềm nào khác.
+
+Tính năng:
+- Đếm số lần cắm / rút USB và ghi nhận thời gian từng phiên.
+- Tự động vẽ cây thư mục snapshot (root.txt) chỉ hiển thị thư mục kèm dấu /.
+- Ghi log chi tiết file thêm vào (In), copy ra ngoài (Out), tạo mới (Add), di chuyển (Move), xóa (Delete).
+- Gom nhóm thông minh: Khi copy số lượng lớn file, tự động gộp dòng log tóm tắt.
+- Toàn bộ log lưu gọn gàng trong thư mục E:\USB_Log\USB_Logs\.
+
+================================================================================
+                  CHI TIẾT 3 CÁCH KHỞI CHẠY VÀ SỬ DỤNG
+================================================================================
+
+--------------------------------------------------------------------------------
+CÁCH 1: KHỞI CHẠY TỨC THÌ BẰNG CHUỘT (QUICK RUN / TEST)
+--------------------------------------------------------------------------------
+Dành cho trường hợp bạn muốn bật giám sát ngay lập tức trên máy mà không cần cài đặt:
+
+1. Mở ổ USB, đi vào thư mục USB_Log (ví dụ: E:\USB_Log).
+2. Nhấp đúp chuột (Double-click) vào file "USB_Monitor.exe".
+3. Phần mềm sẽ tự động ẩn xuống chạy ngầm trong tiến trình Windows, đếm số lần cắm,
+   quét cây thư mục và bắt đầu ghi log mọi thao tác ra/vào.
+
+--------------------------------------------------------------------------------
+CÁCH 2: KHỞI CHẠY BẰNG DÒNG LỆNH POWERSHELL / CMD / FILE SCRIPT
+--------------------------------------------------------------------------------
+Dành cho trường hợp bạn muốn gọi chạy ngầm hoàn toàn hoặc tự động qua script:
+
+- Bằng PowerShell:
+  Start-Process "E:\USB_Log\USB_Monitor.exe" -WindowStyle Hidden
+
+- Bằng CMD:
+  start "" /B "E:\USB_Log\USB_Monitor.exe"
+
+- Bằng file VBScript tàng hình (tạo file start_silent.vbs trong E:\USB_Log):
+  Set WshShell = CreateObject("WScript.Shell")
+  WshShell.Run "USB_Monitor.exe", 0, False
+
+--------------------------------------------------------------------------------
+CÁCH 3: CÀI ĐẶT TỰ ĐỘNG CHẠY 100% KHI CẮM VÀO MÁY (PERMANENT AUTO-RUN)
+--------------------------------------------------------------------------------
+Dành cho máy tính cá nhân hoặc các máy tính mà bạn muốn:
+"Cứ cắm chiếc USB này vào là máy tính tự bật ngầm trình ghi log 100%, không cần nhớ mở thủ công".
+
+1. Cắm USB vào máy tính muốn thiết lập.
+2. Mở thư mục E:\USB_Log trên chiếc USB.
+3. Nhấp đúp chuột (Double-click) vào file "setup_autorun.bat" (hoặc chuột phải chọn Run as administrator).
+   - File này tự động yêu cầu quyền Admin (UAC) và vượt qua hạn chế của Windows mà không bị tắt console.
+4. XONG! Từ bây giờ, mỗi khi bạn cắm USB này vào máy tính đó:
+   - Windows Task Scheduler sẽ tự động phát hiện và gọi E:\USB_Log\USB_Monitor.exe chạy ngầm.
+   - Bạn không cần bấm bất kỳ thứ gì.
+5. Cài cho nhiều máy: Mang USB sang máy khác, chỉ cần chạy lại bước 3 trên máy đó là xong.
+
+* Cách hủy / gỡ cài đặt tự động chạy (Uninstall):
+  - Cách 1 (Nhanh nhất): Nhấp đúp vào file "uninstall_autorun.bat" trong USB_Log.
+  - Cách 2: Mở PowerShell (Admin) và gõ lệnh:
+    schtasks /delete /tn AutoLaunch_USB_Logger /f
+
+================================================================================
+                  CÁCH XEM LẠI NHẬT KÝ VÀ CÂY THƯ MỤC TRÊN USB
+================================================================================
+Toàn bộ kết quả được lưu gọn gàng trong thư mục: E:\USB_Log\USB_Logs\
+
+1. Xem sơ đồ cây thư mục: Mở file "root.txt"
+   - Thể hiện sơ đồ các thư mục trên USB dạng cây phân cấp (chỉ Folder kèm dấu /).
+   - Tự động cập nhật lại mỗi khi cắm USB hoặc khi tạo/xóa thư mục mới.
+
+2. Xem chi tiết file ra / vào:
+   - Mở file "log_history.txt" (dạng text đơn giản).
+   - Mở file "log_history.md" (dạng Markdown đẹp mắt).
+   - Mở file "log_history.json" (dữ liệu cấu trúc).
+
+3. Xem tổng số lần cắm:
+   - Mở file "E:\USB_Log\.usb_data\state.json".
+
+================================================================================
+           TÍNH NĂNG ĐẶC BIỆT: GIÁM SÁT Ổ ĐĨA ẢO VERACRYPT
+================================================================================
+Nếu bạn sử dụng file container mã hóa của VeraCrypt (ví dụ: Private.hc):
+- Khi chưa mở container:
+  Ghi log nếu có ai copy Private.hc ra khỏi USB (Out Private.hc) hoặc xóa/sửa file.
+- Khi bạn Mount container thành ổ ảo (ví dụ ổ Z:\):
+  + Tự động phát hiện và ghi log: [VeraCrypt] Đã MOUNT Container thành ổ đĩa [Z:]
+  + Tự động theo dõi các file bên trong vùng mã hóa:
+    Mọi thao tác tạo, copy hay xóa file bên trong ổ Z:\ sẽ được ghi lại chi tiết
+    với tiền tố: [VeraCrypt-Z:] In ..., [VeraCrypt-Z:] Out ..., [VeraCrypt-Z:] Delete ...
+  + Tự động vẽ thêm sơ đồ thư mục của vùng mã hóa vào file root.txt trong thời gian mount.
+  + Khi Unmount ổ ảo: Tự động ghi log [VeraCrypt] Đã UNMOUNT Container khỏi ổ đĩa [Z:]
+
+================================================================================
+                      CAM KẾT AN TOÀN DỮ LIỆU
+================================================================================
+- Phần mềm hoạt động ở chế độ giám sát thụ động (chỉ lắng nghe thông báo của hệ điều hành).
+- Tuyệt đối KHÔNG can thiệp, KHÔNG mã hóa và KHÔNG xóa bất kỳ file nào có sẵn trên USB của bạn.
+- KHÔNG CẦN FORMAT USB, giữ nguyên dữ liệu và chạy bình thường.
+================================================================================
