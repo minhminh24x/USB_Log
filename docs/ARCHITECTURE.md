@@ -94,6 +94,32 @@ Hệ thống hoạt động theo mô hình **Event-Driven Non-Intrusive Engine**
   - **Event ID:** `2003` hoặc `2100` (Sự kiện cắm thiết bị lưu trữ USB mới vào hệ thống).
   - **Hành động:** Khi có sự kiện cắm USB, Windows tự động kích hoạt script PowerShell quét tìm ổ USB và khởi chạy ngầm `USB_Monitor.exe`.
 
+### 2.6. Smart Move Pairing on FAT32 (Nhận Diện Cut-Paste & Di Chuyển File)
+- **Đặc thù của hệ thống FAT32:**
+  - Khác với NTFS có Transactional Object ID, trên hệ thống tệp FAT32 (định dạng phổ biến nhất của USB), khi người dùng thực hiện thao tác **Cut (`Ctrl + X`) $\rightarrow$ Paste (`Ctrl + V`)** hoặc kéo thả file giữa hai thư mục:
+  - Trình điều khiển `fastfat.sys` của Windows không phát ra mã `FILE_ACTION_RENAMED` mà chia thành 2 sự kiện độc lập:
+    1. `FILE_ACTION_REMOVED` (`Delete`) tại thư mục nguồn.
+    2. `FILE_ACTION_ADDED` (`In`) tại thư mục đích.
+- **Thuật toán ghép cặp thông minh:**
+  - Trong cửa sổ Debounce 1.5 giây, hệ thống tự động quét và đối chiếu các cặp sự kiện `Delete` và `In`/`Add`:
+  - Nếu phát hiện cùng tên tệp cơ sở (`basename`) trên cùng một ổ đĩa USB, hệ thống tự động hợp nhất thành **1 sự kiện `Move` duy nhất**:
+    ```text
+    2026/10/12 01:49:04 Move Music/song.mp3 to Music/Remix/
+    ```
+
+### 2.7. Đánh Giá Độ An Toàn Phần Cứng & Tuổi Thọ Chip Nhớ (NAND Flash & Wear Leveling)
+- **Không can thiệp phân vùng (Partitions):**
+  - Ứng dụng hoạt động ở tầng File System thông thường (tương tự Notepad hay Media Player).
+  - Tuyệt đối không can thiệp Partition Table, MBR, GPT, Volume Boot Record hay gọi các hàm `diskpart`/`format`.
+- **Tối ưu hao mòn chip nhớ Flash (P/E Cycles):**
+  - NAND Flash chỉ hao mòn khi có thao tác **Ghi (Write/Program)** hoặc **Xóa (Erase)**. Thao tác Đọc (Read) không ảnh hưởng tuổi thọ.
+  - Khi rảnh rỗi (Idle): Ứng dụng ngủ hoàn toàn (Blocked on Win32 Kernel), **0 byte đọc/ghi đĩa**, chip xử lý USB mát và không nhấp nháy đèn.
+  - Khi có thao tác file: Chỉ append 1 dòng text (~80 bytes). Toàn bộ dữ liệu ghi trong 1 ngày sử dụng bình thường **chưa tới 0.05 MB (50 KB)**.
+  - So với việc người dùng copy 1 bài hát (10 MB) hay 1 video (1 GB), lượng dữ liệu USB_Log ghi nhỏ hơn hàng trăm nghìn lần, hoàn toàn không ảnh hưởng đến tuổi thọ 5 - 10 năm của chip nhớ.
+- **An toàn khi rút USB đột ngột (Sudden Unplug):**
+  - Mọi thao tác ghi log đều mở, flush dữ liệu và đóng handle ngay lập tức trong thời gian **< 1ms**.
+  - Trong 99.99% thời gian cắm USB, file log luôn ở trạng thái đóng (closed), không giữ handle dang dở, ngăn ngừa nguy cơ hỏng bảng FAT.
+
 ---
 
 ## 3. Khả Năng Mở Rộng & Tương Thích

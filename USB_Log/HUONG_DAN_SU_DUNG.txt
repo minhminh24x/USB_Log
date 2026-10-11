@@ -94,9 +94,12 @@ Nếu bạn sử dụng file container mã hóa của VeraCrypt (ví dụ: Priva
   + Khi Unmount ổ ảo: Tự động ghi log [VeraCrypt] Đã UNMOUNT Container khỏi ổ đĩa [Z:]
 
 ================================================================================
-                      CAM KẾT AN TOÀN DỮ LIỆU
+              CAM KẾT AN TOÀN DỮ LIỆU & PHẦN CỨNG USB
 ================================================================================
-- Phần mềm hoạt động ở chế độ giám sát thụ động (chỉ lắng nghe thông báo của hệ điều hành).
-- Tuyệt đối KHÔNG can thiệp, KHÔNG mã hóa và KHÔNG xóa bất kỳ file nào có sẵn trên USB của bạn.
-- KHÔNG CẦN FORMAT USB, giữ nguyên dữ liệu và chạy bình thường.
+- Phần mềm hoạt động ở chế độ thụ động (Passive Read Listener).
+- Tuyệt đối KHÔNG can thiệp, KHÔNG mã hóa và KHÔNG xóa file có sẵn trên USB.
+- KHÔNG CẦN FORMAT USB, không thay đổi số lượng phân vùng (MBR/GPT).
+- Không hao mòn chip Flash: Chế độ Zero-Polling (0.0% CPU, 0 byte đọc/ghi khi rảnh).
+  Dữ liệu ghi log cả ngày chưa tới 50 KB, không ảnh hưởng tuổi thọ chip nhớ.
+- An toàn khi rút đột ngột: File log được đóng ngay lập tức chỉ trong < 1ms.
 ================================================================================

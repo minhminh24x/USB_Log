@@ -443,6 +443,38 @@ class USBMonitorEngine:
             filtered_events.append(ev)
         events = filtered_events
 
+        # Ghép cặp thông minh cho thao tác Di chuyển (Move / Cut-Paste) trên hệ thống FAT32:
+        # Khi di chuyển file/thư mục giữa 2 vị trí trên USB, FAT32 phát 1 sự kiện Delete và 1 sự kiện In/Add.
+        # Ta ghép đôi các sự kiện có cùng tên cơ sở (basename) thành 1 sự kiện "Move" duy nhất.
+        deletes = [e for e in events if e["action"] == "Delete"]
+        adds_or_ins = [e for e in events if e["action"] in ("In", "Add")]
+
+        paired_deletes = set()
+        paired_adds = set()
+        move_events = []
+
+        for d_ev in deletes:
+            d_name = os.path.basename(d_ev["path"].rstrip("/\\"))
+            if not d_name:
+                continue
+            for a_ev in adds_or_ins:
+                if id(a_ev) in paired_adds:
+                    continue
+                a_name = os.path.basename(a_ev["path"].rstrip("/\\"))
+                if d_name.lower() == a_name.lower() and d_ev["path"] != a_ev["path"]:
+                    paired_deletes.add(id(d_ev))
+                    paired_adds.add(id(a_ev))
+                    move_events.append({
+                        "time": a_ev["time"],
+                        "action": "Move",
+                        "path": d_ev["path"],
+                        "extra": a_ev["path"]
+                    })
+                    break
+
+        if move_events:
+            events = [e for e in events if id(e) not in paired_deletes and id(e) not in paired_adds] + move_events
+
         groups = defaultdict(list)
         for ev in events:
             p = ev["path"]
@@ -473,7 +505,12 @@ class USBMonitorEngine:
                     is_dir = os.path.isdir(item["path"]) if os.path.exists(item["path"]) else item["path"].endswith(("/", "\\"))
                     formatted = self._format_target(item["path"], is_dir=is_dir)
                     if action == "Move" and item.get("extra"):
-                        extra_formatted = self._format_target(item["extra"], is_dir=is_dir)
+                        extra_p = item["extra"]
+                        if not is_dir and os.path.basename(item["path"]) == os.path.basename(extra_p):
+                            dest_dir = os.path.dirname(extra_p)
+                            extra_formatted = self._format_target(dest_dir, is_dir=True)
+                        else:
+                            extra_formatted = self._format_target(extra_p, is_dir=is_dir)
                         line = f"{ts} Move {formatted} to {extra_formatted}"
                     else:
                         line = f"{ts} {action} {formatted}"
